@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "author": "EEE 4775 scaffold",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-s3-devkitc-1",
+      "id": "esp",
+      "top": 0,
+      "left": 0,
+      "attrs": { "builder": "esp-idf" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn_event",
+      "top": 179,
+      "left": -153.6,
+      "attrs": { "color": "blue", "label": "Terrain Mapping Task Trigger", "xray": "" }
+    },
+    {
+      "type": "wokwi-led",
+      "id": "led1",
+      "top": -13.2,
+      "left": 138.2,
+      "attrs": { "color": "red", "label": "Waiting for Lock? On = Yes" }
+    },
+    {
+      "type": "wokwi-resistor",
+      "id": "r1",
+      "top": 110.4,
+      "left": 85.85,
+      "rotate": 90,
+      "attrs": { "value": "1000" }
+    }
+  ],
+  "connections": [
+    [ "esp:TX", "$serialMonitor:RX", "", [] ],
+    [ "esp:RX", "$serialMonitor:TX", "", [] ],
+    [ "btn_event:1.l", "esp:18", "blue", [ "v0" ] ],
+    [ "btn_event:2.r", "esp:GND.1", "black", [ "v10", "h-50" ] ],
+    [ "esp:2", "r1:1", "green", [ "h0" ] ],
+    [ "r1:2", "led1:A", "green", [ "v28.8", "h104.4", "v-145.2" ] ],
+    [ "led1:C", "esp:GND.2", "green", [ "v0" ] ]
+  ],
+  "serialMonitor": { "display": "terminal" },
+  "dependencies": {}
+}
