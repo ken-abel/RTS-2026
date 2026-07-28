@@ -27,15 +27,3 @@ Folded in the LED and vTaskDelay functionality from App 1,
 as well as the binary semaphore signaling from App 3 to enable signaling
 H and M tasks to start (H via vTaskDelayUntil loop from App 1, M via GPIO
 interrupts and binary semaphore signaling).
-
-To-do
-Edit initial comment block to reflect that this is the final app and not App4
-Delete irrelevant tasks and lines of code from the skeleton
-
-Things I noticed:
-With the lock set to be a mutex, if you spam the button, the M task will starve the L task and actually significantly decrease the latency
-of the H task (from 220ms at times, to consistently ~2ms).
-With the lock set to be a semaphore, if you press the button, it consistently causes H's delay to be greater than 1 seconds, sometimes 3 seconds or more
-compared to never breaching 0.3 seconds when using a mutex with priority inheritance.
-The period of M is variable, so when I calculate total utilization U, I should find the threshold of M's period at which U = .78 and 1
-App2 has a WCET measurer that I can use to find the execution time of L M and H
