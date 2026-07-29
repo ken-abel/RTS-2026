@@ -263,8 +263,8 @@ USE_PI_MUTEX = 0
     <th>Task</th>
     <th>Period</th>
     <th>WCET</th>
-    <th>Latency With PI (Mutex)</th>
-    <th>Latency Without PI (Bin Sem)</th>
+    <th>Response time With Prio. Inheritance (Mutex)</th>
+    <th>Response time Without Prio. Inheritance (Bin Sem)</th>
 </tr>
 </thead>
 
@@ -275,8 +275,8 @@ USE_PI_MUTEX = 0
     <td>Flight Control</td>
     <td>1000 ms</td>
     <td>24.65 ms</td>
-    <td>PI delay here</td>
-    <td>Non-PI delay here</td>
+    <td>252 ms</td>
+    <td>~1,000-2,250 ms</td>
 </tr>
 
 
@@ -284,8 +284,8 @@ USE_PI_MUTEX = 0
     <td>Terrain Mapping</td>
     <td>User-determined</td>
     <td>2,953.7 ms</td>
-    <td>PI delay here</td>
-    <td>Non-PI delay here</td>
+    <td>-</td>
+    <td>-</td>
 </tr>
 
 
@@ -293,8 +293,8 @@ USE_PI_MUTEX = 0
     <td>Telemetry Logger</td>
     <td>~550 ms</td>
     <td>421.0 ms</td>
-    <td>PI delay here</td>
-    <td>Non-PI delay here</td>
+    <td>-</td>
+    <td>-</td>
 </tr>
 
 
@@ -305,10 +305,25 @@ USE_PI_MUTEX = 0
 <div class="section-note">
 
 <p>
+    Note that the response time of the Flight Control task is that of the WCET of the Terrain Mapper when priority inheritance is disabled.
+</p>
+
+</div>
+
+<p>
     Without the terrain mapper, the CPU Utilization is 0.8. This is below the Rate-Monotonic sufficiency bound for a two-task system, meaning that using Rate Monotonic (and Earliest Deadline First) scheduling will result in a schedulable set of tasks.
     However, adding the terrain mapper will immediately cause the system to lose both RM and EDF-scheduling feasibility- this is intentional. This exaggerates the response time of the Flight Control task so that priority inversion can be easily seen, either by watching the LED or reading the log.
 </p>
 
+<p>
+    With Priority Inheritance enabled, you can see an interesting effect of the Terrain Mapper starving the Telemetry Logging task-- if you repeatedly press the button, initiating the terrain mapping task, the Flight Control task's delay drops to just two milliseconds consistently.
+    This is because the Terrain Mapper is starving the CPU and preventing the Telemetry Logger from unblocking, despite being ready, thus opening the window for the Flight Controller to take the mutex and immediately preempt the Terrain Mapper.
+</p>
+
+<p>
+    It is also interesting that the maximum response time of the Flight Controller with priority inheritance enabled was slightly more than half of the WCET for the Telemetry Logger, over more than 100 trials. I expected it to approach 421.0 ms. This may reflect
+    my WCET-measurement technique requiring logging and CPU tick polling functions adding some execution time to the task, but it should be minimal, and not on the order of 200 milliseconds. This may be worth investigating going forward.
+</p>
 
 
 <h2 id="architecture">System Architecture</h2>
