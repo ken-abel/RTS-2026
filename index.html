@@ -1,206 +1,345 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Project Overview</title>
+    <title>Project Overview - Martian Drone Priority Inversion Demo</title>
+
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            max-width: 1100px;
+            margin: auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #222;
+        }
+
+        nav {
+            background-color: #333;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            margin-right: 5px;
+            border-radius: 5px;
+        }
+
+        nav a:hover {
+            background-color: #555;
+        }
+
+        h1, h2 {
+            color: #1b3a57;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        th, td {
+            border: 1px solid #aaa;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #e8eef5;
+        }
+
+        pre {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+
+        .video-container {
+            background-color: #f7f7f7;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        img {
+            max-width: 100%;
+            border-radius: 8px;
+        }
+
+        .section-note {
+            background-color: #f7f7f7;
+            padding: 15px;
+            border-left: 5px solid #1b3a57;
+            margin: 15px 0;
+        }
+
+    </style>
+
 </head>
+
 
 <body>
 
-<h1>Project Overview</h1>
+
+<nav>
+    <a href="index.html">Overview</a>
+    <a href="demo.html">Demo</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="analysis.html">WCET & Hazards</a>
+    <a href="README.md">README</a>
+</nav>
+
+
+<h1 id="overview">Project Overview</h1>
 
 <p>
-    A simulated and simplified flight control system that correctly handles 
-    priority inversion, built to demonstrate the importance of proper mutex 
-    implementation in an aerospace embedded system.
+    A simulated and simplified flight control system that demonstrates
+    priority inversion and the importance of proper mutex implementation
+    in an aerospace embedded system.
 </p>
 
 
 <h2>The Scenario</h2>
 
 <p>
-    A small drone, deployed from a nearby spacecraft currently orbiting Mars, 
-    needs to adjust its attitude and trajectory, map the surface, and routinely 
+    A small drone, deployed from a nearby spacecraft currently orbiting Mars,
+    needs to adjust its attitude and trajectory, map the surface, and routinely
     log its flight path to a database located on the larger spacecraft.
 </p>
 
 <p>
-    Using three tasks with the priority hierarchy in the task table, this project 
-    demonstrates the importance of resource lock ownership and its impact on 
-    worst-case execution time (WCET) for tasks sharing a resource.
+    Using three tasks with different priority levels, this project demonstrates
+    the importance of resource lock ownership and its impact on worst-case
+    execution time (WCET) for tasks sharing a resource.
 </p>
 
 
-<!-- Embed YouTube/Wokwi video here -->
-<h2>Demo Video</h2>
+<h2 id="demo">Demo Video</h2>
+
+<div class="video-container">
 
 <p>
     Video demonstration will be embedded here.
 </p>
 
-<!-- Example:
+<!-- Replace YOUR_VIDEO_ID with your actual YouTube video ID
+
 <iframe 
-    width="560" 
+    width="560"
     height="315"
     src="https://www.youtube.com/embed/YOUR_VIDEO_ID"
     title="Project Demo"
     frameborder="0"
     allowfullscreen>
 </iframe>
+
 -->
+
+</div>
 
 
 <h2>Task Table</h2>
 
-<table border="1">
-    <thead>
-        <tr>
-            <th>Task</th>
-            <th>Priority</th>
-            <th>Function</th>
-        </tr>
-    </thead>
+<table>
 
-    <tbody>
-        <tr>
-            <td>Flight Control</td>
-            <td>High</td>
-            <td>
-                Computes engine thrust and attitude corrections every 10 ms.
-                <br>
-                <strong>Note:</strong> This period has been slowed to 1 second 
-                for the purpose of demonstrating priority inversion.
-            </td>
-        </tr>
+<thead>
+<tr>
+    <th>Task</th>
+    <th>Priority</th>
+    <th>Function</th>
+</tr>
+</thead>
 
-        <tr>
-            <td>Terrain Mapping</td>
-            <td>Medium</td>
-            <td>
-                Processes camera and lidar data to avoid hazards.
-            </td>
-        </tr>
 
-        <tr>
-            <td>Telemetry Logger</td>
-            <td>Low</td>
-            <td>
-                Uploads flight data to the nearby host ship.
-            </td>
-        </tr>
-    </tbody>
+<tbody>
+
+<tr>
+    <td>Flight Control</td>
+    <td>High (15)</td>
+    <td>
+        Computes engine thrust and attitude corrections every 10 ms.
+        <br><br>
+        <strong>Note:</strong> This period has been slowed to 1 second
+        for the purpose of demonstrating priority inversion.
+    </td>
+</tr>
+
+
+<tr>
+    <td>Terrain Mapping</td>
+    <td>Medium (10)</td>
+    <td>
+        Processes camera and lidar data to avoid hazards.
+        This task is intentionally CPU-intensive to demonstrate interference.
+    </td>
+</tr>
+
+
+<tr>
+    <td>Telemetry Logger</td>
+    <td>Low (5)</td>
+    <td>
+        Uploads flight data to the nearby host spacecraft and accesses the
+        shared navigation resource.
+    </td>
+</tr>
+
+</tbody>
+
 </table>
+
 
 
 <h2>Priority Inversion Scenario</h2>
 
 <p>
-    The Telemetry Logger locks the navigation mutex to upload current 
+    The Telemetry Logger locks the navigation mutex to upload current
     positional data to the nearby spacecraft.
 </p>
 
 <p>
-    The Flight Control task periodically becomes ready each control cycle, 
-    requiring access to the navigation mutex.
+    The Flight Control task periodically becomes ready during each control
+    cycle and requires access to the navigation mutex.
 </p>
 
 <p>
-    The Terrain Mapping task processes lidar and camera frames upon manual 
-    request from the nearby spacecraft (simulated by pressing a button). 
-    This task is computationally intensive and time-consuming.
+    The Terrain Mapping task processes lidar and camera frames upon manual
+    request from the nearby spacecraft (simulated by pressing a button).
+    This task is computationally intensive and consumes significant CPU time.
 </p>
 
 
 <h2>Priority Inheritance</h2>
 
 <p>
-    The Flight Control task must quickly respond to disturbances or detected 
-    obstacles and hazards. Due to the presence of the mutex and the given 
-    priority hierarchy, priority inversion is possible.
+    The Flight Control task must quickly respond to disturbances or detected
+    obstacles and hazards. Due to the priority hierarchy and shared mutex,
+    priority inversion is possible.
 </p>
 
 <p>
-    To prevent this, priority inheritance must be enabled so that the Terrain 
-    Mapping task cannot preempt the Telemetry Logger while the Flight Control 
-    task is waiting for the navigation mutex.
+    With priority inheritance enabled, the Telemetry Logger temporarily
+    inherits the Flight Control task's priority while holding the mutex.
+    This prevents Terrain Mapping from preempting the logger and extending
+    Flight Control's blocking time.
 </p>
 
+
 <p>
-    To simulate priority inheritance being disabled, a binary semaphore can be 
-    used in place of a mutex by setting:
+    To simulate priority inheritance being disabled, a binary semaphore can be
+    used instead of a mutex by setting:
 </p>
+
 
 <pre>
 USE_PI_MUTEX = 0
 </pre>
 
 
-<h2>WCET Evidence</h2>
+<h2 id="wcet">WCET Evidence</h2>
 
-<table border="1">
-    <thead>
-        <tr>
-            <th>Task</th>
-            <th>WCET</th>
-            <th>Other Information</th>
-        </tr>
-    </thead>
+<div class="section-note">
 
-    <tbody>
-        <tr>
-            <td>Flight Control</td>
-            <td><!-- Insert WCET value --></td>
-            <td>
-                Computes engine thrust and attitude corrections.
-            </td>
-        </tr>
+<p>
+    Measured worst-case execution times will be added here after timing
+    measurements are collected from the simulation.
+</p>
 
-        <tr>
-            <td>Terrain Mapping</td>
-            <td><!-- Insert WCET value --></td>
-            <td>
-                Processes camera and lidar data to avoid hazards.
-            </td>
-        </tr>
+</div>
 
-        <tr>
-            <td>Telemetry Logger</td>
-            <td><!-- Insert WCET value --></td>
-            <td>
-                Uploads flight data to nearby host ship.
-            </td>
-        </tr>
-    </tbody>
+
+<table>
+
+<thead>
+<tr>
+    <th>Task</th>
+    <th>WCET</th>
+    <th>Information</th>
+</tr>
+</thead>
+
+
+<tbody>
+
+<tr>
+    <td>Flight Control</td>
+    <td>Pending measurement</td>
+    <td>
+        Computes engine thrust and attitude corrections.
+    </td>
+</tr>
+
+
+<tr>
+    <td>Terrain Mapping</td>
+    <td>Pending measurement</td>
+    <td>
+        Processes camera and lidar data to avoid hazards.
+    </td>
+</tr>
+
+
+<tr>
+    <td>Telemetry Logger</td>
+    <td>Pending measurement</td>
+    <td>
+        Uploads flight data to nearby spacecraft.
+    </td>
+</tr>
+
+
+</tbody>
+
 </table>
 
 
-<h2>System Architecture Diagram</h2>
+
+<h2 id="architecture">System Architecture</h2>
 
 <p>
-    Architecture diagram will be inserted here.
+    The complete system architecture diagram is available on the architecture
+    page.
 </p>
-
-<!-- Example:
-<img src="images/system_architecture.png" 
-     alt="System Architecture Diagram"
-     width="800">
--->
-
-
-<h2>Hazard Analysis and Industry Standard Mapping</h2>
 
 <p>
-    Hazard analysis and optional industry standard mapping will be provided here.
+    <a href="architecture.html">View System Architecture →</a>
 </p>
+
+
+
+<h2 id="hazards">Hazard Analysis and Industry Standard Mapping</h2>
+
+<p>
+    Hazard analysis and optional industry standard mapping will be provided
+    in the system analysis section.
+</p>
+
+<p>
+    <a href="analysis.html">View WCET and Hazard Analysis →</a>
+</p>
+
 
 
 <h2>Full README</h2>
 
 <p>
-    <a href="README.md">View the full README documentation</a>
+    The complete project documentation, build instructions, and source code
+    information are available in the repository README.
+</p>
+
+<p>
+    <a href="README.md">View Full README Documentation →</a>
 </p>
 
 
 </body>
+
 </html>
