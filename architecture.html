@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Architecture - Martian Drone Priority Inversion Demo</title>
+
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            max-width: 1100px;
+            margin: auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #222;
+        }
+
+        nav {
+            background-color: #333;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            margin-right: 5px;
+            border-radius: 5px;
+        }
+
+        nav a:hover {
+            background-color: #555;
+        }
+
+        h1, h2 {
+            color: #1b3a57;
+        }
+
+        .diagram-container {
+            overflow-x: auto;
+            padding: 20px;
+            background-color: #f7f7f7;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        th, td {
+            border: 1px solid #aaa;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #e8eef5;
+        }
+
+        code {
+            background-color: #eee;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+    </style>
+
+</head>
+
+
+<body>
+
+<nav>
+    <a href="index.html">Overview</a>
+    <a href="demo.html">Demo</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="analysis.html">WCET & Hazards</a>
+    <a href="README.md">README</a>
+</nav>
+
+
+<h1>System Architecture</h1>
+
+<p>
+    This project implements a simplified aerospace flight control system
+    running on an ESP32 using FreeRTOS. The purpose of the system is to
+    demonstrate how improper resource locking can create priority inversion
+    in a real-time embedded system.
+</p>
+
+<p>
+    Three concurrent tasks operate with different priorities. The Flight
+    Control task requires access to a shared navigation resource that is
+    periodically locked by the lower-priority Telemetry Logger task. The
+    Terrain Mapping task creates CPU interference and demonstrates how
+    priority inversion can increase worst-case execution time (WCET).
+</p>
+
+
+<h2>High-Level Architecture Diagram</h2>
+
+
+<div class="diagram-container">
+
+<div class="mermaid">
+
+flowchart TB
+
+    subgraph ESP32["ESP32 Embedded System"]
+
+        subgraph Hardware["Hardware Interfaces"]
+
+            BTN["User Button<br>GPIO 18<br>Terrain Mapping Trigger"]
+
+            TIMER["Periodic Timer<br>1 Hz Control Loop"]
+
+            LED["LED Output<br>GPIO 2<br>Lock Wait Indicator"]
+
+        end
+
+
+        subgraph RTOS["FreeRTOS Scheduler"]
+
+            TIMER_TASK["Control Loop Task<br>Priority 20<br>Releases control_loop_sem"]
+
+            H["Flight Control Task<br>Priority 15<br><br>- Attitude correction<br>- Requires navigation lock<br>- Time-critical"]
+
+            M["Terrain Mapping Task<br>Priority 10<br><br>- Camera/Lidar processing<br>- CPU-intensive<br>- No lock access"]
+
+            L["Telemetry Logger Task<br>Priority 5<br><br>- Sends flight data<br>- Holds navigation lock"]
+
+        end
+
+
+        subgraph Synchronization["Synchronization"]
+
+            CONTROL_SEM["control_loop_sem<br>Binary Semaphore"]
+
+            SIGNAL_SEM["sig_sem<br>ISR Signal Semaphore"]
+
+            LOCK["Navigation Lock<br><br>Mutex Mode:<br>Priority Inheritance ON<br><br>Binary Semaphore Mode:<br>No Inheritance"]
+
+        end
+
+
+        NAV["Navigation Data Resource<br><br>Shared by Flight Control<br>and Telemetry Logger"]
+
+    end
+
+
+    BTN --> ISR["GPIO Interrupt Service Routine"]
+
+    ISR --> SIGNAL_SEM
+
+    SIGNAL_SEM --> M
+
+
+    TIMER --> TIMER_TASK
+
+    TIMER_TASK --> CONTROL_SEM
+
+    CONTROL_SEM --> H
+
+
+    H -->|"Requests Lock"| LOCK
+
+    L -->|"Acquires Lock"| LOCK
+
+    LOCK --> NAV
+
+    L -->|"Writes Position Data"| NAV
+
+
+    M -.->|"CPU Interference<br>causes priority inversion"| L
+
+
+    H --> LED
+
+</div>
+
+</div>
+
+
+<h2>Task Responsibilities</h2>
+
+
+<table>
+
+<tr>
+    <th>Task</th>
+    <th>Priority</th>
+    <th>Purpose</th>
+</tr>
+
+<tr>
+    <td>Control Loop Task</td>
+    <td>20</td>
+    <td>
+        Periodically releases the Flight Control task every control cycle.
+    </td>
+</tr>
+
+<tr>
+    <td>Flight Control</td>
+    <td>15 (High)</td>
+    <td>
+        Performs attitude and trajectory corrections.
+        Requires access to the shared navigation resource.
+    </td>
+</tr>
+
+<tr>
+    <td>Terrain Mapping</td>
+    <td>10 (Medium)</td>
+    <td>
+        Processes simulated camera and lidar data.
+        Does not access the shared resource, but consumes CPU time.
+    </td>
+</tr>
+
+<tr>
+    <td>Telemetry Logger</td>
+    <td>5 (Low)</td>
+    <td>
+        Uploads navigation data to the spacecraft.
+        Holds the navigation lock during its critical section.
+    </td>
+</tr>
+
+</table>
+
+
+<h2>Synchronization Design</h2>
+
+<p>
+    The primary synchronization challenge in this system is protecting the
+    shared navigation resource. Both the Flight Control and Telemetry Logger
+    tasks require access to this resource.
+</p>
+
+
+<table>
+
+<tr>
+    <th>Configuration</th>
+    <th>Behavior</th>
+</tr>
+
+
+<tr>
+    <td>
+        <code>USE_PI_MUTEX = 1</code><br>
+        FreeRTOS Mutex
+    </td>
+
+    <td>
+        Priority inheritance is enabled. When the Flight Control task blocks
+        waiting for the Telemetry Logger, the logger temporarily inherits the
+        higher priority and completes its critical section without being
+        interrupted by Terrain Mapping.
+    </td>
+</tr>
+
+
+<tr>
+    <td>
+        <code>USE_PI_MUTEX = 0</code><br>
+        Binary Semaphore
+    </td>
+
+    <td>
+        No ownership or priority inheritance exists. Terrain Mapping can
+        preempt the Telemetry Logger while the Flight Control task waits,
+        increasing the blocking time.
+    </td>
+</tr>
+
+
+</table>
+
+
+<h2>Priority Inversion Flow</h2>
+
+
+<p>
+    The failure scenario occurs as follows:
+</p>
+
+
+<ol>
+    <li>
+        Telemetry Logger (low priority) acquires the navigation lock.
+    </li>
+
+    <li>
+        Flight Control (high priority) becomes ready and requests the same lock.
+    </li>
+
+    <li>
+        Flight Control blocks while waiting for the resource.
+    </li>
+
+    <li>
+        Terrain Mapping (medium priority) begins executing and preempts the
+        Telemetry Logger.
+    </li>
+
+    <li>
+        Flight Control cannot proceed until both Terrain Mapping and Telemetry
+        Logger complete.
+    </li>
+</ol>
+
+
+<p>
+    With priority inheritance enabled, the Telemetry Logger temporarily
+    executes at the Flight Control priority, preventing Terrain Mapping from
+    extending the blocking duration.
+</p>
+
+
+<h2>Implementation Notes</h2>
+
+<ul>
+    <li>
+        Platform: ESP32 running FreeRTOS
+    </li>
+
+    <li>
+        Scheduler: Preemptive real-time scheduler
+    </li>
+
+    <li>
+        Shared resource: Navigation data lock
+    </li>
+
+    <li>
+        Demonstration modes:
+        <code>USE_PI_MUTEX = 1</code> (mutex)
+        and
+        <code>USE_PI_MUTEX = 0</code> (binary semaphore)
+    </li>
+
+</ul>
+
+
+<script type="module">
+
+    import mermaid from 
+    'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+
+    mermaid.initialize({
+        startOnLoad: true,
+        theme: "default"
+    });
+
+</script>
+
+
+</body>
+
+</html>
