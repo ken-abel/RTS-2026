@@ -62,7 +62,6 @@ operations to degrade while preserving the Flight Control task's ability to
 respond to disturbances.
 
 ## Build & run
-<toolchain, board, how to reproduce>
 Wokwi online compiler, using ESP32-S3 board. Using the Wokwi link provided, either compile and run the project in your browser, or copy the project then run it in your browser (if you would like to make edits to the project).
 If using the source code provided in GitHub, make a new Wokwi project with the ESP32-S3 board, add the main.c file and the diagram.json file, and run.
 
