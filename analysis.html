@@ -1,1 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hazard Analysis</title>
+
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            max-width: 1100px;
+            margin: auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #222;
+        }
+
+        nav {
+            background-color: #333;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            margin-right: 5px;
+            border-radius: 5px;
+        }
+
+        nav a:hover {
+            background-color: #555;
+        }
+
+        h1, h2 {
+            color: #1b3a57;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        th, td {
+            border: 1px solid #aaa;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #e8eef5;
+        }
+
+        .section-note {
+            background-color: #f7f7f7;
+            padding: 15px;
+            border-left: 5px solid #1b3a57;
+            margin: 20px 0;
+        }
+
+        code {
+            background: #f4f4f4;
+            padding: 2px 5px;
+            border-radius: 4px;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+<nav>
+    <a href="index.html">Overview</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="demo.html">Task Table, WCET, Response Times</a>
+    <a href="analysis.html">Hazard Analysis</a>
+    <a href="README.md">README</a>
+</nav>
+
+<h1>Hazard Analysis and Industry Standard Mapping</h1>
+
+<p>
+Although this project is an educational demonstration rather than a
+flight-certified system, it models a common real-time systems problem:
+<strong>priority inversion</strong>. The following analysis identifies
+potential hazards resulting from improper synchronization and discusses
+how priority inheritance mitigates those hazards.
+</p>
+
+<div class="section-note">
+
+<p>
+This analysis is intended to demonstrate engineering methodology rather
+than certify compliance with any aerospace or safety standard.
+</p>
+
+</div>
+
+<hr>
+
+<h2>Hazard Identification</h2>
+
+<table>
+
+<thead>
+
+<tr>
+    <th>Hazard</th>
+    <th>Cause</th>
+    <th>Potential Effect</th>
+    <th>Mitigation</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+    <td>Priority inversion</td>
+    <td>
+        Low-priority task owns a shared resource while a
+        medium-priority task preempts it.
+    </td>
+    <td>
+        Flight Control experiences excessive blocking,
+        delaying control outputs.
+    </td>
+    <td>
+        Use a mutex supporting priority inheritance.
+    </td>
+</tr>
+
+<tr>
+
+    <td>Missed control deadlines</td>
+
+    <td>
+        Flight Control waits excessively for the navigation
+        resource.
+    </td>
+
+    <td>
+        Delayed attitude corrections and degraded vehicle
+        stability.
+    </td>
+
+    <td>
+        Bound blocking time through priority inheritance and
+        minimize critical sections.
+    </td>
+
+</tr>
+
+<tr>
+
+    <td>CPU starvation</td>
+
+    <td>
+        Computationally intensive Terrain Mapping monopolizes
+        processor time.
+    </td>
+
+    <td>
+        Increased response time for lower-priority tasks.
+    </td>
+
+    <td>
+        Assign appropriate priorities and reduce execution time
+        where possible.
+    </td>
+
+</tr>
+
+<tr>
+
+    <td>Shared resource contention</td>
+
+    <td>
+        Multiple tasks require exclusive access to navigation
+        data.
+    </td>
+
+    <td>
+        Blocking and increased response time.
+    </td>
+
+    <td>
+        Keep critical sections short and use ownership-aware
+        synchronization primitives.
+    </td>
+
+</tr>
+
+</tbody>
+
+</table>
+
+<hr>
+
+<h2>Risk Assessment</h2>
+
+<table>
+
+<thead>
+
+<tr>
+    <th>Hazard</th>
+    <th>Likelihood</th>
+    <th>Severity</th>
+    <th>Overall Risk</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+    <td>Priority inversion</td>
+    <td>Possible</td>
+    <td>High</td>
+    <td>High</td>
+</tr>
+
+<tr>
+    <td>Missed control deadline</td>
+    <td>Possible</td>
+    <td>High</td>
+    <td>High</td>
+</tr>
+
+<tr>
+    <td>CPU starvation</td>
+    <td>Likely</td>
+    <td>Medium</td>
+    <td>Medium</td>
+</tr>
+
+<tr>
+    <td>Resource contention</td>
+    <td>Certain</td>
+    <td>Medium</td>
+    <td>Medium</td>
+</tr>
+
+</tbody>
+
+</table>
+
+<hr>
+
+<h2>Mitigation Strategy</h2>
+
+<p>
+The primary mitigation demonstrated by this project is replacing a binary
+semaphore with a FreeRTOS mutex implementing priority inheritance.
+</p>
+
+<p>
+When the Flight Control task blocks while waiting for a mutex held by the
+Telemetry Logger, FreeRTOS temporarily raises the logger's priority to
+match the waiting task. This prevents the Terrain Mapping task from
+preempting the logger and bounds the Flight Control task's blocking time.
+</p>
+
+<p>
+The measured response times presented on the timing analysis page
+demonstrate the effectiveness of this mechanism.
+</p>
+
+<hr>
+
+<h2>Industry Standard Mapping</h2>
+
+<table>
+
+<thead>
+
+<tr>
+    <th>Standard</th>
+    <th>Relationship to this Project</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+
+    <td>DO-178C</td>
+
+    <td>
+        Emphasizes deterministic software behavior,
+        timing verification, and requirements-based
+        verification. This project demonstrates deterministic
+        synchronization and timing analysis concepts.
+    </td>
+
+</tr>
+
+<tr>
+
+    <td>MISRA C</td>
+
+    <td>
+        Encourages predictable, maintainable embedded software.
+        The project follows a structured task organization and
+        avoids dynamic synchronization behavior during runtime.
+    </td>
+
+</tr>
+
+<tr>
+
+    <td>NASA Software Engineering Handbook</td>
+
+    <td>
+        Recommends bounded execution time, deterministic task
+        behavior, and careful resource sharing in safety-critical
+        software. Priority inheritance directly supports these
+        objectives.
+    </td>
+
+</tr>
+
+<tr>
+
+    <td>FreeRTOS Design Guidelines</td>
+
+    <td>
+        Recommend mutexes rather than binary semaphores when
+        ownership and priority inheritance are required.
+    </td>
+
+</tr>
+
+</tbody>
+
+</table>
+
+<hr>
+
+<h2>Lessons Learned</h2>
+
+<ul>
+
+<li>
+Priority inversion is fundamentally a resource-sharing problem,
+not simply a scheduling problem.
+</li>
+
+<li>
+Priority inheritance bounds blocking time without changing
+application behavior.
+</li>
+
+<li>
+Worst-case response time depends on both computation and
+resource contention.
+</li>
+
+<li>
+Selecting the correct synchronization primitive is critical
+for deterministic real-time performance.
+</li>
+
+</ul>
+
+<hr>
+
+<h2>Conclusion</h2>
+
+<p>
+This project demonstrates that replacing a mutex with a binary
+semaphore can dramatically increase the response time of a
+high-priority task, despite no changes to application logic.
+The results reinforce a fundamental principle of real-time
+software engineering: deterministic synchronization is essential
+for maintaining predictable timing behavior in safety-critical
+systems.
+</p>
+
+</body>
+</html>
