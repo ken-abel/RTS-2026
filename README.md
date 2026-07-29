@@ -51,9 +51,7 @@ non-critical processing tasks experience delays.
 | Failure Condition | Detection Method | System Response |
 |-------------------|------------------|-----------------|
 | Terrain Mapping task consumes excessive CPU time | Response-time measurements and task timing monitoring | Flight Control maintains highest priority and continues execution; terrain processing may be delayed |
-| Telemetry Logger is blocked by resource contention | Mutex acquisition delay monitoring | Priority inheritance temporarily elevates the Telemetry Logger priority so the shared resource is released sooner |
 | Navigation resource unavailable | Flight Control detects delayed mutex acquisition | Flight Control waits for bounded resource access rather than allowing uncontrolled priority inversion |
-| Non-critical mapping operation fails or is delayed | Task timeout or missing completion signal | Continue flight control and telemetry functions while postponing surface analysis updates |
 
 The system prioritizes vehicle stability and control over non-critical
 functions. If computationally expensive Terrain Mapping operations cannot
