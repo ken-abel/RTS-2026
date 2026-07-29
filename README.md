@@ -1,9 +1,13 @@
-A flight control system that handles priority inversion, built to demonstrate the importance of proper mutex implementation in an
-aerospace embedded system.
+Project Overview:
+A simulated and simplified flight control system that correctly handles priority inversion, built to demonstrate the importance of proper mutex implementation in an aerospace embedded system.
 
-A small drone, deployed from a nearby spacecraft currently orbiting Mars, needs to adjust its attitude and trajectory, map the surface, 
-and routinely log its flight path to a database located on the larger spacecraft.
+The Scenario:
+A small drone, deployed from a nearby spacecraft currently orbiting Mars, needs to adjust its attitude and trajectory, map the surface, and routinely log its flight path to a database located on the larger spacecraft.
+Using three tasks with the below priority hierarchy, demonstrate the importance of resource lock ownership on WCET for tasks sharing a resource.
 
+(embed video here)
+
+Task Table:
 | Task             | Priority | Function                                                     |
 | ---------------- | -------- | ------------------------------------------------------------ |
 | Flight Control   | High     | Computes engine thrust and attitude corrections every 10 ms. | Note: this period has been slowed to 1s for the sake of demonstrating priority inversion
@@ -20,10 +24,16 @@ of the mutex and the given priority hierarchy, priority inversion is possible. S
 Mapping task doesn't preempt the Telemetry Logger while the Flight Control task is urgently waiting for the mutex.
 To simulate having priority inheritance disabled, a binary semaphore can be used in place of a mutex by setting USE_PI_MUTEX to 0.
 
+WCET evidence:
+| Task             | WCET     | Other Things                                                 |
+| ---------------- | -------- | ------------------------------------------------------------ |
+| Flight Control   | High     | Computes engine thrust and attitude corrections every 10 ms. |
+| Terrain Mapping  | Medium   | Processes camera and lidar data to avoid hazards.            |
+| Telemetry Logger | Low      | Uploads flight data to nearby host ship.                     |
 
-Capabilities from each application:
-App 4 is the skeleton. Specifically, the priority inversion demo.
-Folded in the LED and vTaskDelay functionality from App 1,
-as well as the binary semaphore signaling from App 3 to enable signaling
-H and M tasks to start (H via vTaskDelayUntil loop from App 1, M via GPIO
-interrupts and binary semaphore signaling).
+System Architecture Diagram:
+
+Hazard Analysis + standard mapping??
+
+README link:
+
