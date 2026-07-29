@@ -85,9 +85,7 @@
 
 </head>
 
-
 <body>
-
 
 <nav>
     <a href="index.html">Overview</a>
@@ -98,7 +96,7 @@
 </nav>
 
 
-<h1 id="overview">Project Overview</h1>
+<h1>Project Overview</h1>
 
 <p>
     A simulated and simplified flight control system that demonstrates
@@ -111,226 +109,112 @@
 
 <p>
     A small drone, deployed from a nearby spacecraft currently orbiting Mars,
-    needs to adjust its attitude and trajectory, map the surface, and routinely
-    log its flight path to a database located on the larger spacecraft.
+    must periodically adjust its attitude and trajectory, map the Martian
+    surface, and upload telemetry to its host spacecraft.
 </p>
 
 <p>
-    Using three tasks with different priority levels, this project demonstrates
-    the importance of resource lock ownership and its impact on worst-case
-    execution time (WCET) for tasks sharing a resource.
+    Three FreeRTOS tasks cooperate to perform these functions while sharing a
+    common navigation resource. This project demonstrates how improper
+    synchronization can significantly increase the response time of a
+    high-priority real-time task through <strong>priority inversion</strong>.
 </p>
 
 
-<h2 id="demo">Demo Video</h2>
+<h2>Project Objectives</h2>
+
+<ul>
+    <li>Demonstrate the classic priority inversion problem using FreeRTOS.</li>
+    <li>Compare mutexes with priority inheritance against binary semaphores.</li>
+    <li>Measure task WCET and response time under both synchronization methods.</li>
+    <li>Analyze the impact of resource sharing on schedulability.</li>
+</ul>
+
+
+<h2>Demo Video</h2>
 
 <div class="video-container">
 
 <p>
-    Video demonstration will be embedded here.
+    Embed your YouTube demonstration here.
 </p>
 
-<!-- Replace YOUR_VIDEO_ID with your actual YouTube video ID
-
-<iframe 
-    width="560"
-    height="315"
+<!--
+<iframe
+    width="800"
+    height="450"
     src="https://www.youtube.com/embed/YOUR_VIDEO_ID"
-    title="Project Demo"
+    title="Project Demonstration"
     frameborder="0"
     allowfullscreen>
 </iframe>
-
 -->
 
 </div>
 
 
-<h2>Task Table</h2>
-
-<table>
-
-<thead>
-<tr>
-    <th>Task</th>
-    <th>Priority</th>
-    <th>Function</th>
-</tr>
-</thead>
-
-
-<tbody>
-
-<tr>
-    <td>Flight Control</td>
-    <td>High (15)</td>
-    <td>
-        Computes engine thrust and attitude corrections every 10 ms.
-        <br><br>
-        <strong>Note:</strong> This period has been slowed to 1 second
-        for the purpose of demonstrating priority inversion.
-    </td>
-</tr>
-
-
-<tr>
-    <td>Terrain Mapping</td>
-    <td>Medium (10)</td>
-    <td>
-        Processes camera and lidar data to avoid hazards.
-        This task is intentionally CPU-intensive to demonstrate interference.
-    </td>
-</tr>
-
-
-<tr>
-    <td>Telemetry Logger</td>
-    <td>Low (5)</td>
-    <td>
-        Uploads flight data to the nearby host spacecraft and accesses the
-        shared navigation resource.
-    </td>
-</tr>
-
-</tbody>
-
-</table>
-
-
-
 <h2>Priority Inversion Scenario</h2>
 
 <p>
-    The Telemetry Logger locks the navigation mutex to upload current
-    positional data to the nearby spacecraft.
+    The Telemetry Logger periodically acquires a shared navigation resource in
+    order to upload flight data to the host spacecraft. The Flight Control task
+    also requires this resource during each control cycle.
 </p>
 
 <p>
-    The Flight Control task periodically becomes ready during each control
-    cycle and requires access to the navigation mutex.
-</p>
-
-<p>
-    The Terrain Mapping task processes lidar and camera frames upon manual
-    request from the nearby spacecraft (simulated by pressing a button).
-    This task is computationally intensive and consumes significant CPU time.
+    A third task, Terrain Mapping, performs computationally intensive image and
+    lidar processing but never accesses the shared resource. If priority
+    inheritance is disabled, this medium-priority task can repeatedly preempt
+    the Telemetry Logger while the Flight Control task waits, producing the
+    classic priority inversion problem.
 </p>
 
 
 <h2>Priority Inheritance</h2>
 
 <p>
-    The Flight Control task must quickly respond to disturbances or detected
-    obstacles and hazards. Due to the priority hierarchy and shared mutex,
-    priority inversion is possible.
+    When a FreeRTOS mutex is used, the Telemetry Logger temporarily inherits the
+    Flight Control task's priority while it owns the shared resource. This
+    prevents the Terrain Mapping task from extending the blocking time and
+    bounds the response time of the Flight Control task.
 </p>
 
 <p>
-    With priority inheritance enabled, the Telemetry Logger temporarily
-    inherits the Flight Control task's priority while holding the mutex.
-    This prevents Terrain Mapping from preempting the logger and extending
-    Flight Control's blocking time.
+    Replacing the mutex with a binary semaphore removes this ownership
+    mechanism, allowing unbounded priority inversion to occur.
 </p>
-
-
-<p>
-    To simulate priority inheritance being disabled, a binary semaphore can be
-    used instead of a mutex by setting:
-</p>
-
 
 <pre>
-USE_PI_MUTEX = 0
+USE_PI_MUTEX = 1    // FreeRTOS mutex (priority inheritance)
+
+USE_PI_MUTEX = 0    // Binary semaphore (no priority inheritance)
 </pre>
 
 
-<h2 id="wcet">WCET and Priority Inversion Timing Analysis</h2>
+<h2>Performance Evaluation</h2>
 
 <div class="section-note">
 
 <p>
-    WCET measurements were collected for each task during execution. 
-    Additionally, lock acquisition latency was measured for the Flight Control task to quantify the effect of priority inversion. The lock acquisition delay is reported separately from task WCET because it represents scheduling interference and resource blocking rather than computation time.
-</p>
-
-</div>
-
-
-<table>
-
-<thead>
-<tr>
-    <th>Task</th>
-    <th>Period</th>
-    <th>WCET</th>
-    <th>Response time With Prio. Inheritance (Mutex)</th>
-    <th>Response time Without Prio. Inheritance (Bin Sem)</th>
-</tr>
-</thead>
-
-
-<tbody>
-
-<tr>
-    <td>Flight Control</td>
-    <td>1000 ms</td>
-    <td>24.65 ms</td>
-    <td>252 ms</td>
-    <td>~1,000-2,250 ms</td>
-</tr>
-
-
-<tr>
-    <td>Terrain Mapping</td>
-    <td>User-determined</td>
-    <td>2,953.7 ms</td>
-    <td>-</td>
-    <td>-</td>
-</tr>
-
-
-<tr>
-    <td>Telemetry Logger</td>
-    <td>~550 ms</td>
-    <td>421.0 ms</td>
-    <td>-</td>
-    <td>-</td>
-</tr>
-
-
-</tbody>
-
-</table>
-
-<div class="section-note">
-
-<p>
-    Note that the response time of the Flight Control task is roughly approaching the WCET of the Terrain Mapper when priority inheritance is disabled.
+    Detailed task timing measurements, worst-case execution times (WCET),
+    response-time measurements, CPU utilization calculations, and
+    schedulability analysis are presented on the
+    <strong>Task Table, WCET, Response Times</strong> page.
 </p>
 
 </div>
 
 <p>
-    Without the terrain mapper, the CPU Utilization is 0.8. This is below the Rate-Monotonic sufficiency bound for a two-task system, meaning that using Rate Monotonic (or Earliest Deadline First) scheduling will result in a schedulable set of tasks.
-    However, adding the terrain mapper will immediately cause the system to lose both RM and EDF-scheduling feasibility- this is intentional. This exaggerates the response time of the Flight Control task so that priority inversion can be easily seen, either by watching the LED or reading the log.
-</p>
-
-<p>
-    With Priority Inheritance enabled, you can see an interesting effect of the Terrain Mapper starving the Telemetry Logging task-- if you repeatedly press the button, initiating the terrain mapping task, the Flight Control task's delay drops to just two milliseconds consistently.
-    This is because the Terrain Mapper is starving the CPU and preventing the Telemetry Logger from unblocking, despite being ready, thus opening the window for the Flight Controller to take the mutex and immediately preempt the Terrain Mapper.
-</p>
-
-<p>
-    It is also interesting that the maximum response time of the Flight Controller with priority inheritance enabled was slightly more than half of the WCET for the Telemetry Logger, over more than 100 trials. I expected it to approach 421.0 ms. This may reflect
-    my WCET-measurement technique requiring logging and CPU tick polling functions adding some execution time to the task, but it should be minimal, and not on the order of 200 milliseconds. This may be worth investigating going forward.
+    <a href="demo.html">View Task Timing and Performance Analysis →</a>
 </p>
 
 
-<h2 id="architecture">System Architecture</h2>
+<h2>System Architecture</h2>
 
 <p>
-    The complete system architecture diagram is available on the architecture
-    page.
+    The architecture page contains a system block diagram illustrating the
+    interaction between FreeRTOS tasks, synchronization primitives, GPIO
+    interrupts, timers, and shared resources.
 </p>
 
 <p>
@@ -338,32 +222,30 @@ USE_PI_MUTEX = 0
 </p>
 
 
-
-<h2 id="hazards">Hazard Analysis and Industry Standard Mapping</h2>
+<h2>Hazard Analysis and Industry Standard Mapping</h2>
 
 <p>
-    Hazard analysis and optional industry standard mapping will be provided
-    in the system analysis section.
+    A hazard analysis identifies potential failure modes associated with
+    priority inversion and discusses how proper synchronization techniques
+    mitigate those risks. The page also relates the project to relevant
+    aerospace and embedded software engineering practices.
 </p>
 
 <p>
-    <a href="analysis.html">View WCET and Hazard Analysis →</a>
+    <a href="analysis.html">View Hazard Analysis →</a>
 </p>
-
 
 
 <h2>Full README</h2>
 
 <p>
-    The complete project documentation, build instructions, and source code
-    information are available in the repository README.
+    The repository README contains complete documentation, build
+    instructions, implementation details, and source code.
 </p>
 
 <p>
     <a href="README.md">View Full README Documentation →</a>
 </p>
 
-
 </body>
-
 </html>
