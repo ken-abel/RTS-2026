@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Table, WCET, Response Times</title>
+
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            max-width: 1100px;
+            margin: auto;
+            padding: 20px;
+            line-height: 1.6;
+            color: #222;
+        }
+
+        nav {
+            background-color: #333;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 30px;
+        }
+
+        nav a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            margin-right: 5px;
+            border-radius: 5px;
+        }
+
+        nav a:hover {
+            background-color: #555;
+        }
+
+        h1, h2 {
+            color: #1b3a57;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+        }
+
+        th, td {
+            border: 1px solid #aaa;
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #e8eef5;
+        }
+
+        .section-note {
+            background-color: #f7f7f7;
+            padding: 15px;
+            border-left: 5px solid #1b3a57;
+            margin: 20px 0;
+        }
+
+        img {
+            max-width: 100%;
+            border-radius: 8px;
+        }
+    </style>
+
+</head>
+
+<body>
+
+<nav>
+    <a href="index.html">Overview</a>
+    <a href="architecture.html">Architecture</a>
+    <a href="demo.html">Task Table, WCET, Response Times</a>
+    <a href="analysis.html">Hazard Analysis</a>
+    <a href="README.md">README</a>
+</nav>
+
+<h1>Task Table, WCET, and Response Time Analysis</h1>
+
+<p>
+This page summarizes the timing characteristics of the simulated flight
+control system and compares system behavior when using a FreeRTOS mutex
+(priority inheritance enabled) versus a binary semaphore (priority
+inheritance disabled).
+</p>
+
+<hr>
+
+<h2>Task Table</h2>
+
+<table>
+
+<thead>
+
+<tr>
+    <th>Task</th>
+    <th>Priority</th>
+    <th>Period</th>
+    <th>Purpose</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+    <td>Flight Control</td>
+    <td>15 (High)</td>
+    <td>1000 ms*</td>
+    <td>
+        Computes engine thrust and attitude corrections.
+        The control period has been intentionally slowed from
+        10 ms to 1 s so priority inversion can be easily observed.
+    </td>
+</tr>
+
+<tr>
+    <td>Terrain Mapping</td>
+    <td>10 (Medium)</td>
+    <td>User-triggered</td>
+    <td>
+        Processes camera and lidar data.
+        CPU-intensive and does not access the shared resource.
+    </td>
+</tr>
+
+<tr>
+    <td>Telemetry Logger</td>
+    <td>5 (Low)</td>
+    <td>~550 ms</td>
+    <td>
+        Uploads flight data while holding the shared navigation lock.
+    </td>
+</tr>
+
+</tbody>
+
+</table>
+
+<hr>
+
+<h2>Worst-Case Execution Time (WCET)</h2>
+
+<div class="section-note">
+
+<p>
+Worst-case execution times were measured for each task individually.
+Response time for the Flight Control task is reported separately because
+it includes mutex blocking time caused by contention for the shared
+navigation resource.
+</p>
+
+</div>
+
+<table>
+
+<thead>
+
+<tr>
+    <th>Task</th>
+    <th>Period</th>
+    <th>Observed WCET</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+    <td>Flight Control</td>
+    <td>1000 ms</td>
+    <td>24.65 ms</td>
+</tr>
+
+<tr>
+    <td>Terrain Mapping</td>
+    <td>User Triggered</td>
+    <td>2953.7 ms</td>
+</tr>
+
+<tr>
+    <td>Telemetry Logger</td>
+    <td>~550 ms</td>
+    <td>421.0 ms</td>
+</tr>
+
+</tbody>
+
+</table>
+
+<hr>
+
+<h2>Flight Control Response Time</h2>
+
+<p>
+Unlike WCET, response time includes both execution time and any blocking
+caused by synchronization. The values below measure the elapsed time
+between the Flight Control task requesting the shared navigation
+resource and successfully acquiring it.
+</p>
+
+<table>
+
+<thead>
+
+<tr>
+    <th>Synchronization Method</th>
+    <th>Observed Response Time</th>
+</tr>
+
+</thead>
+
+<tbody>
+
+<tr>
+    <td>FreeRTOS Mutex (Priority Inheritance Enabled)</td>
+    <td>252 ms</td>
+</tr>
+
+<tr>
+    <td>Binary Semaphore (No Priority Inheritance)</td>
+    <td>~1000 – 2250 ms</td>
+</tr>
+
+</tbody>
+
+</table>
+
+<div class="section-note">
+
+<p>
+Notice that the maximum response time without priority inheritance
+approaches the execution time of the Terrain Mapping task, demonstrating
+that the medium-priority task is extending the blocking time experienced
+by the Flight Control task.
+</p>
+
+</div>
+
+<hr>
+
+<h2>CPU Utilization and Schedulability</h2>
+
+<p>
+Without the Terrain Mapping task executing, total CPU utilization is
+approximately <strong>0.80</strong>. This remains below the
+Rate-Monotonic sufficiency bound for a two-task system, so the Flight
+Control and Telemetry Logger tasks are schedulable.
+</p>
+
+<p>
+Activating the Terrain Mapping task intentionally increases processor
+utilization beyond both the Rate-Monotonic and Earliest Deadline First
+schedulability limits. This exaggerates the effects of priority
+inversion, making the difference between a mutex and a binary semaphore
+easy to observe in both the serial log and the on-board LED.
+</p>
+
+<hr>
+
+<h2>Experimental Observations</h2>
+
+<p>
+An interesting behavior was observed while repeatedly triggering the
+Terrain Mapping task with priority inheritance enabled. Despite the
+Terrain Mapping task consuming nearly all available processor time, the
+Flight Control task often acquired the mutex after waiting only about
+two milliseconds.
+</p>
+
+<p>
+This occurs because the Terrain Mapping task prevents the Telemetry
+Logger from beginning another critical section. When the Flight Control
+task becomes ready, it is frequently able to acquire the mutex
+immediately before the Telemetry Logger resumes execution.
+</p>
+
+<hr>
+
+<h2>Discussion</h2>
+
+<p>
+The maximum observed response time with priority inheritance enabled was
+approximately 252 ms, slightly more than half of the measured WCET of
+the Telemetry Logger's critical section. Intuitively, a value closer to
+421 ms was expected.
+</p>
+
+<p>
+One possible explanation is that the instrumentation used to measure
+execution time (serial logging and timestamp polling) slightly affects
+task execution. Another possibility is that the asynchronous timing of
+task releases rarely allows the Flight Control task to encounter the
+Telemetry Logger immediately after it acquires the mutex. Further
+investigation would be required to determine the precise cause.
+</p>
+
+<hr>
+
+<h2>Future Work</h2>
+
+<ul>
+    <li>Add oscilloscope or logic analyzer timing measurements.</li>
+    <li>Collect a larger statistical sample of response times.</li>
+    <li>Compare measured response times with analytical response-time analysis.</li>
+    <li>Evaluate additional synchronization primitives.</li>
+</ul>
+
+</body>
+</html>
