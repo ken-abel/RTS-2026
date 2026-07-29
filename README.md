@@ -27,6 +27,7 @@ The system consists of three FreeRTOS tasks coordinated through a shared navigat
 
 ## Tasks & timing (WCET evidence)
 |     Task        | Period T   | WCET C   | U=C/T    | Priority | Deadline |
+|-----------------|------------|----------|----------|----------|----------|
 |Flight Controller|  1000 ms   | 24.65 ms | 0.025    |    15    |  300 ms  |
 |Terrain Mapper   |User-Defined| ~3000 ms | Variable |    10    |  Soft    |
 |Telemetry Logger |  ~550 ms   | 421.0 ms | 0.765    |    5     | 1000 ms  |
