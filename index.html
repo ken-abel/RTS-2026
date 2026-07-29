@@ -244,13 +244,13 @@ USE_PI_MUTEX = 0
 </pre>
 
 
-<h2 id="wcet">WCET Evidence</h2>
+<h2 id="wcet">WCET and Priority Inversion Timing Analysis</h2>
 
 <div class="section-note">
 
 <p>
-    Measured worst-case execution times will be added here after timing
-    measurements are collected from the simulation.
+    WCET measurements were collected for each task during execution. 
+    Additionally, lock acquisition latency was measured for the Flight Control task to quantify the effect of priority inversion. The lock acquisition delay is reported separately from task WCET because it represents scheduling interference and resource blocking rather than computation time.
 </p>
 
 </div>
@@ -262,7 +262,8 @@ USE_PI_MUTEX = 0
 <tr>
     <th>Task</th>
     <th>WCET</th>
-    <th>Information</th>
+    <th>Latency With PI (Mutex)</th>
+    <th>Latency Without PI (Bin Sem)</th>
 </tr>
 </thead>
 
@@ -271,28 +272,25 @@ USE_PI_MUTEX = 0
 
 <tr>
     <td>Flight Control</td>
-    <td>Pending measurement</td>
-    <td>
-        Computes engine thrust and attitude corrections.
-    </td>
+    <td>24.65 ms</td>
+    <td>PI delay here</td>
+    <td>Non-PI delay here</td>
 </tr>
 
 
 <tr>
     <td>Terrain Mapping</td>
-    <td>Pending measurement</td>
-    <td>
-        Processes camera and lidar data to avoid hazards.
-    </td>
+    <td>2,953.7 ms</td>
+    <td>PI delay here</td>
+    <td>Non-PI delay here</td>
 </tr>
 
 
 <tr>
     <td>Telemetry Logger</td>
-    <td>Pending measurement</td>
-    <td>
-        Uploads flight data to nearby spacecraft.
-    </td>
+    <td>24.65 ms</td>
+    <td>PI delay here</td>
+    <td>Non-PI delay here</td>
 </tr>
 
 
