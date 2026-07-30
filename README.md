@@ -5,7 +5,7 @@ A flight control system that handles priority inversion, built to demonstrate th
 aerospace embedded system.
 
 ## Demo
-- Video: [<YouTube>](https://youtu.be/bPMO7dOWfHU?si=2_0C0-8279cGSEuA)
+- Video: https://youtu.be/bPMO7dOWfHU?si=2_0C0-8279cGSEuA
 - Live Wokwi: ABEL-FINAL-RTS26Summer https://wokwi.com/projects/470739744054261761
 
 ## Architecture
